@@ -41,7 +41,7 @@ elif [ x${OS}x = xDarwinx ] ; then
         g++ --std=c++14 "$@"
     }
     function convert_prof {
-        xcrun llvm-profdata merge -o default.profdata default.profraw
+        xcrun llvm-profdata merge -o default.profdata default*.profraw
     }
 fi
 
@@ -50,7 +50,7 @@ if [ x${USE_PROFILE}x = x1x ] ; then
     echo Generate profile
     #python3 codegen.py > ./gened.cc
     compile -DENABLE_MT=0 ${OPTFLAGS} -I/usr/local/include -fprofile-generate -o simdoku ./simdoku.cpp
-    cat ../sample.0.10.txt ../plbinput.txt | ./simdoku > /dev/null
+    cat ./input4profiling.txt | ./simdoku > /dev/null
     convert_prof
     echo Re-compiling
     compile -DENABLE_MT=0 ${OPTFLAGS} -I/usr/local/include -fprofile-use -o simdoku ./simdoku.cpp
@@ -61,13 +61,19 @@ fi
 
 
 echo Start testing
-cat ../sample.0.10.txt | ./simdoku | tee test.txt
+cat ./testdata.txt | ./simdoku | tee test.txt
 if [ $(diff test.txt ref.txt | wc -l) -ne 0 ] ; then
     echo ERROR
 fi
+
+if [ ! -f benchmark.txt ]; then
+    wget http://yota.ro/benchmark.txt.gz
+    gunzip benchmark.txt.gz
+fi
+
 echo Start benchmarking
 #cat ../sample.0.10.repeated10000x.txt |  time ./simdoku > /dev/null
-/usr/bin/time ./simdoku ../sample.0.10.repeated100000x.txt > /dev/null
+/usr/bin/time ./simdoku ./benchmark.txt > /dev/null
 
 if [ x${ENABLE_MULTITHREAD}x = x1x ] ; then
     echo Compiling Multi-threaded version
@@ -79,6 +85,6 @@ if [ x${ENABLE_MULTITHREAD}x = x1x ] ; then
     fi
 
     echo Start benchmarking with MT
-    SUDOKU_NTHREADS=4 /usr/bin/time ./simdoku ../sample.0.10.repeated100000x.txt > /dev/null
+    SUDOKU_NTHREADS=4 /usr/bin/time ./simdoku ./benchmark.txt > /dev/null
 fi
 
